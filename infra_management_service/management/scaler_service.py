@@ -5,6 +5,10 @@ import docker
 from typing import Optional
 import time
 
+from utils.logger_service import Logger
+
+logger = Logger(__file__).get_logger()
+
 
 class ScalerService:
     def __init__(self, config_manager, terraform_dir: str = "./terraform"):
@@ -30,13 +34,13 @@ class ScalerService:
             matching = [c for c in containers if c.name.startswith(prefix)]
             return len(matching)
         except Exception as e:
-            print(f">  Error querying Docker: {e}")
+            logger.error(f"Error querying Docker: {e}")
             return 0
 
     def request_scale(self, action: str):
         """Add scaling request to queue."""
         self.scaling_queue.put(action)
-        print(f"> Scaling request queued: {action}")
+        logger.info(f"Scaling request queued: {action}")
 
     def _scaling_worker(self):
         """Worker thread that processes scaling requests."""
@@ -48,21 +52,20 @@ class ScalerService:
             except queue.Empty:
                 continue
             except Exception as e:
-                print(f"> Error in scaling worker: {e}")
+                logger.info(f"Error in scaling worker: {e}")
 
     def _execute_scale(self, action: str):
         """Execute the scaling operation."""
         with self._lock:
-            # Get ACTUAL current count from Docker
             current_count = self._get_running_container_count()
-            print(f"> Current running containers: {current_count}")
+            logger.info(f"Current running containers: {current_count}")
 
             if action == "scale_up":
                 new_count = current_count + 1
             elif action == "scale_down":
                 new_count = current_count - 1
             else:
-                print(f"> Unknown action: {action}")
+                logger.error(f"Unknown action: {action}")
                 return
 
             # Bounds checking
@@ -71,29 +74,35 @@ class ScalerService:
             new_count = max(min_count, min(new_count, max_count))
 
             if new_count == current_count:
-                print(
-                    f">  Already at boundary (min={min_count}, max={max_count}), skipping {action}"
+                logger.info(
+                    f"Already at boundary (min={min_count}, max={max_count}), skipping {action}"
                 )
                 return
 
-            print(f"> Executing {action}: {current_count} -> {new_count} containers")
+            logger.info(f"Executing {action}: {current_count} -> {new_count} containers")
+            
+            import os
+            logger.info(os.getcwd())
+
 
             # Execute Terraform
             success = self._run_terraform(new_count)
 
             if success:
-                print(f"> Scaling complete: {new_count} containers should be running")
+                logger.info(
+                    f"Scaling complete: {new_count} containers should be running"
+                )
 
                 time.sleep(5)  # Wait for containers to start/stop
                 actual_count = self._get_running_container_count()
                 if actual_count == new_count:
-                    print(f"> Verified: {actual_count} containers running")
+                    logger.info(f"Verified: {actual_count} containers running")
                 else:
-                    print(
-                        f">  Warning: Expected {new_count} but found {actual_count} containers"
+                    logger.error(
+                        f"Warning: Expected {new_count} but found {actual_count} containers"
                     )
             else:
-                print(f"> Scaling failed")
+                logger.info(f"Scaling failed")
 
     def _run_terraform(self, server_count: int) -> bool:
         """Run Terraform apply command."""
@@ -119,14 +128,14 @@ class ScalerService:
             if result.returncode == 0:
                 return True
             else:
-                print(f"> Terraform error: {result.stderr}")
+                logger.error(f"Terraform error: {result.stderr}")
                 return False
 
         except subprocess.TimeoutExpired:
-            print("> Terraform command timed out")
+            logger.error("Terraform command timed out")
             return False
         except Exception as e:
-            print(f"> Error running Terraform: {e}")
+            logger.error(f"Error running Terraform: {e}")
             return False
 
     def get_current_count(self) -> int:

@@ -22,3 +22,6 @@ Hysteresis: Different thresholds for scale-up vs scale-down
 Non-blocking async operations
 
 Event-driven architecture
+
+
+Run run.bat or use vscode tasks to run.

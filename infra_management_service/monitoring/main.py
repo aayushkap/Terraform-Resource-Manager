@@ -1,5 +1,5 @@
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
-from monitoring_service import MonitoringService
+from monitoring.monitoring_service import MonitoringService
 import asyncio
 import json
 
@@ -23,3 +23,7 @@ async def metrics_websocket(websocket: WebSocket):
         clients.remove(websocket)
     except Exception:
         clients.remove(websocket)
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run("monitoring.main:app", host="127.0.0.1", port=8000, reload=True)

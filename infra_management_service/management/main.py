@@ -1,11 +1,13 @@
-from autoscaler import AutoScaler
+from management.autoscaler import AutoScaler
 import asyncio
 import websockets
 import json
 import signal
 import sys
 import threading
+from utils.logger_service import Logger
 
+logger = Logger(__file__).get_logger()
 
 class Monitor:
     def __init__(self):
@@ -27,14 +29,14 @@ async def receive_from_websocket(uri, monitor):
     while True:
         try:
             async with websockets.connect(uri) as websocket:
-                print(f"> Connected to {uri}")
+                logger.info(f" Connected to {uri}")
                 while True:
                     message = await websocket.recv()
                     container_info = json.loads(message)
                     monitor.set_data(container_info)  # Synchronous call
 
         except Exception as e:
-            print(f"> WebSocket error: {e}, reconnecting in {retry_delay}s...")
+            logger.error(f" WebSocket error: {e}, reconnecting in {retry_delay}s...")
             await asyncio.sleep(retry_delay)
 
 
@@ -42,13 +44,13 @@ async def main():
     websocket_uri = "ws://localhost:8000/ws/metrics"
 
     monitor = Monitor()
-    autoscaler = AutoScaler(monitor, terraform_dir="../terraform")
+    autoscaler = AutoScaler(monitor, terraform_dir="./terraform")
 
     # Create both tasks
     websocket_task = asyncio.create_task(receive_from_websocket(websocket_uri, monitor))
     autoscaler_task = asyncio.create_task(autoscaler.start())
 
-    print("> Management service started")
+    logger.info(" Management service started")
 
     # Wait for both tasks
     await asyncio.gather(websocket_task, autoscaler_task)
@@ -58,4 +60,4 @@ if __name__ == "__main__":
     try:
         asyncio.run(main())
     except KeyboardInterrupt:
-        print("> Shutting down...")
+        logger.info(" Shutting down...")

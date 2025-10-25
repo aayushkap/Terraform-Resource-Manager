@@ -1,11 +1,14 @@
 """
-Main decision engine
+Decision engine
 """
 
 import time
 from collections import deque
 from typing import Dict, List, Optional
 import threading
+from utils.logger_service import Logger
+
+logger = Logger(__file__).get_logger()
 
 
 class MetricsAnalyzer:
@@ -31,12 +34,18 @@ class MetricsAnalyzer:
         Analyze metrics and return scaling decision.
         Returns: 'scale_up', 'scale_down', or None
         """
-        print("runnin analyzer: ", self.config.get("mode"))
+        logger.info("Beginning Analysis")
         if not metrics or self.config.get("mode") != "AUTO":
+            logger.info("Stopping Analysis: Not Auto")
+            return None
+
+        if not metrics or self.config.get("mode") != "AUTO":
+            logger.info("Stopping Analysis: No Metrics")
             return None
 
         running = [m for m in metrics if m.get("status") == "running"]
         if not running:
+            logger.warning("Stopping Analysis: No running container")
             return None
 
         with self._lock:
@@ -44,8 +53,6 @@ class MetricsAnalyzer:
             avg_cpu = sum(m.get("cpu", 0) for m in running) / len(running)
             avg_memory = sum(m.get("memory", 0) for m in running) / len(running)
             avg_requests = sum(m.get("req_per_min", 0) for m in running) / len(running)
-            
-            print("avg_cpu ",avg_cpu)
 
             # Add to history
             self.cpu_history.append(avg_cpu)
@@ -63,7 +70,7 @@ class MetricsAnalyzer:
 
             # Scaling decision based on strategy
             strategy = self.config.get("strategy", "combined")
-            print("strategy", strategy)
+            logger.info(f"Using Strategy: {strategy}")
             if strategy == "cpu":
                 return self._analyze_cpu()
             elif strategy == "memory":
@@ -80,6 +87,9 @@ class MetricsAnalyzer:
     def _analyze_cpu(self) -> Optional[str]:
         """CPU"""
         if len(self.cpu_history) < 3:
+            logger.info(
+                f"No decision: Not enough CPU history"
+            )
             return None
 
         recent_avg = sum(list(self.cpu_history)[-3:]) / 3
@@ -88,11 +98,12 @@ class MetricsAnalyzer:
         cpu_scale_down = self.config.get_nested(
             "scale_down_thresholds", "cpu", default=30
         )
-        
-        print("cpu_threshold", cpu_threshold)
-        print("cpu_scale_down", cpu_scale_down)
 
         if recent_avg > cpu_threshold:
+            logger.info(
+                f"CPU recent_avg: {recent_avg} > cpu_threshold: {cpu_threshold}"
+            )
+
             self.scale_up_streak += 1
             self.scale_down_streak = 0
 
@@ -103,7 +114,10 @@ class MetricsAnalyzer:
                 return self._check_and_scale_up()
 
         elif recent_avg < cpu_scale_down:
-            print("scaling down")
+            logger.info(
+                f"CPU recent_avg: {recent_avg} < cpu_threshold: {cpu_threshold}"
+            )
+
             self.scale_down_streak += 1
             self.scale_up_streak = 0
 
@@ -318,15 +332,17 @@ class MetricsAnalyzer:
             self.last_scale_time = time.time()
             self.scale_up_streak = 0
             return "scale_up"
+        else:
+            logger.info("Will not Scale up: Max Containers reached.")
         return None
 
     def _check_and_scale_down(self) -> Optional[str]:
         """Check if we can scale down."""
         min_containers = self.config.get("min_containers", 1)
-        print("scaling down check")
         if self.current_container_count > min_containers:
-            print("actually scaling down")
             self.last_scale_time = time.time()
             self.scale_down_streak = 0
             return "scale_down"
+        else:
+            logger.info("Will not Scale down: Min Containers reached.")
         return None
