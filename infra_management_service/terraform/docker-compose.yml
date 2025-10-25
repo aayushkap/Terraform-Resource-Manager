@@ -1,0 +1,10 @@
+version: '3.8'
+
+services:
+  terraform:
+    image: hashicorp/terraform:1.6.5
+    volumes:
+      - ..:/workspace
+      - /var/run/docker.sock:/var/run/docker.sock
+    working_dir: /workspace/terraform
+    entrypoint: terraform

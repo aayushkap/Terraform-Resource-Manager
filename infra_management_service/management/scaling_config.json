@@ -1,0 +1,22 @@
+{
+  "mode": "AUTO",
+  "min_containers": 1,
+  "max_containers": 10,
+  "thresholds": {
+    "cpu": 70.0,
+    "memory": 80.0,
+    "requests_per_minute": 100
+  },
+  "scale_down_thresholds": {
+    "cpu": 30.0,
+    "memory": 40.0,
+    "requests_per_minute": 20
+  },
+  "sustained_periods": {
+    "scale_up": 3,
+    "scale_down": 5
+  },
+  "cooldown_seconds": 60,
+  "check_interval_seconds": 5,
+  "strategy": "cpu"
+}
