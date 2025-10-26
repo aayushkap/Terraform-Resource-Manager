@@ -15,6 +15,7 @@ REM Step 2: Run the Python services in parallel (after Terraform completes)
 echo Starting services...
 start cmd /k python -m management.main
 start cmd /k python -m monitoring.main
+start cmd /k python -m gateway.main
 
 echo All services started after Terraform completed.
 pause

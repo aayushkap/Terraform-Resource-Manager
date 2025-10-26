@@ -8,7 +8,7 @@ app = FastAPI(title="FastAPI Load Balanced Demo")
 @app.get("/")
 def read_root():
     return {
-        "message": "Hello fro   m FastAPI!",
+        "message": "Hello from FastAPI!",
         "server_id": os.getenv("SERVER_ID", "unknown"),
         "server_port": os.getenv("SERVER_PORT", "unknown"),
         "environment": os.getenv("ENVIRONMENT", "production"),

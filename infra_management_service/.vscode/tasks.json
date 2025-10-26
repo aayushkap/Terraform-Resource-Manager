@@ -11,7 +11,7 @@
     {
       "label": "Run management.main",
       "type": "shell",
-      "command": "python -m management.main",
+      "command": "powershell -Command \"& { . ${workspaceFolder}\\.venv\\Scripts\\Activate.ps1; python -m management.main }\"",
       "dependsOn": ["Run terraform container"],
       "dependsOrder": "sequence",
       "options": { "cwd": "${workspaceFolder}" },
@@ -20,7 +20,7 @@
     {
       "label": "Run monitoring.main",
       "type": "shell",
-      "command": "python -m monitoring.main",
+      "command": "powershell -Command \"& { . ${workspaceFolder}\\.venv\\Scripts\\Activate.ps1; python -m monitoring.main }\"",
       "dependsOn": ["Run terraform container"],
       "dependsOrder": "sequence",
       "options": { "cwd": "${workspaceFolder}" },

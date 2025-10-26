@@ -87,9 +87,7 @@ class MetricsAnalyzer:
     def _analyze_cpu(self) -> Optional[str]:
         """CPU"""
         if len(self.cpu_history) < 3:
-            logger.info(
-                f"No decision: Not enough CPU history"
-            )
+            logger.info(f"No decision: Not enough CPU history")
             return None
 
         recent_avg = sum(list(self.cpu_history)[-3:]) / 3
@@ -99,10 +97,9 @@ class MetricsAnalyzer:
             "scale_down_thresholds", "cpu", default=30
         )
 
+        logger.info(f"CPU recent_avg: {recent_avg} > cpu_threshold: {cpu_threshold}")
+
         if recent_avg > cpu_threshold:
-            logger.info(
-                f"CPU recent_avg: {recent_avg} > cpu_threshold: {cpu_threshold}"
-            )
 
             self.scale_up_streak += 1
             self.scale_down_streak = 0
@@ -114,9 +111,6 @@ class MetricsAnalyzer:
                 return self._check_and_scale_up()
 
         elif recent_avg < cpu_scale_down:
-            logger.info(
-                f"CPU recent_avg: {recent_avg} < cpu_threshold: {cpu_threshold}"
-            )
 
             self.scale_down_streak += 1
             self.scale_up_streak = 0
@@ -128,6 +122,7 @@ class MetricsAnalyzer:
                 return self._check_and_scale_down()
 
         else:
+            logger.info(f"Stable. Will not scale.")
             self.scale_up_streak = 0
             self.scale_down_streak = 0
 
