@@ -14,7 +14,7 @@ logger = Logger(__file__).get_logger()
 class MetricsAnalyzer:
     def __init__(self, config_manager):
         self.config = config_manager
-        self._lock = threading.RLock()
+        self._lock = threading.RLock() # Allows for recursion depth. Re-entrant.
 
         # Sliding window for sustained metrics
         self.cpu_history = deque(maxlen=10)
@@ -97,7 +97,7 @@ class MetricsAnalyzer:
             "scale_down_thresholds", "cpu", default=30
         )
 
-        logger.info(f"CPU recent_avg: {recent_avg} > cpu_threshold: {cpu_threshold}")
+        logger.info(f"CPU recent_avg: {recent_avg}. cpu_threshold: {cpu_threshold}")
 
         if recent_avg > cpu_threshold:
 

@@ -1,0 +1,16 @@
+# Container States
+container:{container_id}:info = {id, name, status, cpu, memory, timestamp, port}
+container:{container_id}:history = [list of state changes]
+
+# System State
+system:state = {status, current_action, last_update, mode}
+system:events = [list of recent system events]
+
+# Metrics
+metrics:current = {avg_cpu, avg_memory, avg_requests, container_count}
+metrics:history:cpu = [recent CPU values]
+metrics:history:memory = [recent memory values]
+
+# Analysis State
+analysis:state = {analyzing, decision, streak_up, streak_down, cooldown_remaining}
+analysis:thresholds = {cpu_up, cpu_down, memory_up, memory_down}

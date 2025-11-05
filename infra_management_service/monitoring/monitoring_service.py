@@ -2,24 +2,31 @@ import docker
 import threading
 import json
 import time
+from utils.redis_service import RedisService
 
 
 class MonitoringService:
     def __init__(
         self,
         base_url="npipe:////./pipe/docker_engine",
-        cleanup_removed=True,
+        state_validation_interval=15,  # validate container state every 30s
     ):
         self.client = docker.DockerClient(base_url=base_url)
-        self.containers_data = {}  # keyed by container name
+        self.redis = RedisService()
+        self.redis.clear_all()
+        self.redis.set_system_status("initializing", "Starting monitoring service")
+
+        self.containers_data = {}
         self._lock = threading.Lock()
-        self._container_threads = {}  # keyed by container ID
+        self._container_threads = {}
         self._running = False
         self._event_thread = None
-        self.cleanup_removed = cleanup_removed
+        self._validation_thread = None
+        self.container_prefix = "fastapi-server"
+        self.state_validation_interval = state_validation_interval
 
     def _get_container_status(self, container_id):
-        """Fetch current container status from Docker daemon."""
+        """Fetch current container status from Docker daemon"""
         try:
             container = self.client.containers.get(container_id)
             container.reload()
@@ -39,11 +46,9 @@ class MonitoringService:
             return ""
 
     def _monitor_container(self, container):
-        """Continuously monitor a single container's resource stats."""
+        """Continuously monitor a single container's resource utilization"""
         try:
-            # stream=True gives us continuous stats updates (~1 second intervals)
             stats_stream = container.stats(stream=True)
-
             for raw_stats in stats_stream:
                 if not self._running or container.id not in self._container_threads:
                     break
@@ -65,7 +70,6 @@ class MonitoringService:
 
                 online_cpus = stats["cpu_stats"].get("online_cpus", 1)
 
-                # Proper CPU percentage calculation
                 if system_delta > 0 and cpu_delta > 0:
                     cpu_percent = (cpu_delta / system_delta) * online_cpus * 100.0
                 else:
@@ -92,18 +96,91 @@ class MonitoringService:
                 with self._lock:
                     self.containers_data[container.name] = data
 
-                # `Note:` Do not add sleep here, it messes with the Docker stream and ruins the CPU calculation.
+                self.redis.set_container_info(container.id[:12], data)
 
+                # If container died during stats collection, break loop
+                if status in ("exited", "stopped", "removed"):
+                    break
+
+        except StopIteration:
+            # container death
+            self._handle_container_death(container)
         except Exception as e:
-            # On exception mark container with last known status
-            with self._lock:
-                if container.name in self.containers_data:
-                    self.containers_data[container.name]["status"] = (
-                        self._get_container_status(container.id)
-                    )
+            self._handle_container_death(container)
+
+    def _handle_container_death(self, container):
+        """Handle container death"""
+        try:
+            current_status = self._get_container_status(container.id)
+        except Exception:
+            current_status = "removed"
+
+        with self._lock:
+            if container.name in self.containers_data:
+                self.containers_data[container.name].update(
+                    {
+                        "status": current_status,
+                        "cpu": 0.0,
+                        "memory": 0.0,
+                        "timestamp": time.time(),
+                    }
+                )
+
+        self.redis.set_container_info(
+            container.id[:12],
+            {
+                "id": container.id[:12],
+                "name": container.name,
+                "status": current_status,  # "exited", "stopped", "removed"
+                "cpu": 0.0,
+                "memory": 0.0,
+                "timestamp": time.time(),
+                "logs": "",
+            },
+        )
+
+        self._container_threads.pop(container.id, None)
+
+    def _validate_container_state(self):
+        """Reconcile Redis state with actual Docker state"""
+        while self._running:
+            try:
+                time.sleep(self.state_validation_interval)
+
+                actual_containers = {
+                    c.id: c
+                    for c in self.client.containers.list(all=True)
+                    if c.name.startswith(self.container_prefix)
+                }
+
+                with self._lock:
+                    redis_containers = list(self.containers_data.values())
+
+                for container_info in redis_containers:
+                    container_id = container_info["id"]
+
+                    if container_id not in actual_containers:
+                        container_info["status"] = "removed"
+                        container_info["cpu"] = 0.0
+                        container_info["memory"] = 0.0
+                        container_info["timestamp"] = time.time()
+                        self.redis.set_container_info(container_id, container_info)
+                    else:
+                        # match status
+                        actual_status = actual_containers[container_id].status
+                        if container_info["status"] != actual_status:
+                            container_info["status"] = actual_status
+                            container_info["timestamp"] = time.time()
+                            if actual_status != "running":
+                                container_info["cpu"] = 0.0
+                                container_info["memory"] = 0.0
+                            self.redis.set_container_info(container_id, container_info)
+
+            except Exception as e:
+                pass
 
     def _watch_for_new_containers(self):
-        """Listen to Docker events and start/stop monitoring accordingly."""
+        """Listen to Docker events"""
         events = self.client.events(decode=True)
         for event in events:
             if not self._running:
@@ -117,7 +194,33 @@ class MonitoringService:
                 if status in ("start", "create"):
                     try:
                         container = self.client.containers.get(container_id)
-                        if container.id not in self._container_threads:
+                        if (
+                            container.name.startswith(self.container_prefix)
+                            and container.id not in self._container_threads
+                        ):
+                            with self._lock:
+                                self.containers_data[container.name] = {
+                                    "id": container.id[:12],
+                                    "name": container.name,
+                                    "status": "booting",
+                                    "cpu": 0.0,
+                                    "memory": 0.0,
+                                    "timestamp": time.time(),
+                                    "logs": "",
+                                }
+                            self.redis.set_container_info(
+                                container.id[:12],
+                                {
+                                    "id": container.id[:12],
+                                    "name": container.name,
+                                    "status": "booting",
+                                    "cpu": 0.0,
+                                    "memory": 0.0,
+                                    "timestamp": time.time(),
+                                    "logs": "",
+                                },
+                            )
+
                             t = threading.Thread(
                                 target=self._monitor_container,
                                 args=(container,),
@@ -128,97 +231,113 @@ class MonitoringService:
                     except Exception:
                         continue
 
-                # On container stop
+                # On container stop/crash
                 elif status in ("die", "stop", "kill"):
                     try:
                         container = self.client.containers.get(container_id)
-                        with self._lock:
-                            if container.name in self.containers_data:
-                                self.containers_data[container.name][
-                                    "status"
-                                ] = "exited"
-                                self.containers_data[container.name]["cpu"] = 0.0
-                                self.containers_data[container.name]["memory"] = 0.0
-                                self.containers_data[container.name][
-                                    "timestamp"
-                                ] = time.time()
+                        if (
+                            container.name.startswith(self.container_prefix)
+                            and container.id not in self._container_threads
+                        ):
+
+                            container = self.client.containers.get(container_id)
+                            self._handle_container_death(container)
                     except Exception:
                         pass
-                    self._container_threads.pop(container_id, None)
 
-                elif status == "destroy":
-                    try:
-                        container = self.client.containers.get(container_id)
-                        container_name = container.name
-                    except Exception:
-                        container_name = None
-                        with self._lock:
-                            for name, data in self.containers_data.items():
-                                if data.get("id") == container_id[:12]:
-                                    container_name = name
-                                    break
+            elif status == "destroy":
+                container_name = None
+                try:
+                    container = self.client.containers.get(container_id)
+                    container_name = container.name
+                    if not container_name.startswith(self.container_prefix):
+                        continue
+                except Exception:
+                    with self._lock:
+                        for name, data in self.containers_data.items():
+                            if data.get("id") == container_id[:12]:
+                                container_name = name
+                                break
 
-                    if container_name:
-                        if self.cleanup_removed:
-                            with self._lock:
-                                self.containers_data.pop(container_name, None)
-                        else:
-                            with self._lock:
-                                if container_name in self.containers_data:
-                                    self.containers_data[container_name][
-                                        "status"
-                                    ] = "removed"
-                                    self.containers_data[container_name][
-                                        "timestamp"
-                                    ] = time.time()
+                if container_name:
+                    # Mark as removed, don't delete from Redis
+                    with self._lock:
+                        if container_name in self.containers_data:
+                            self.containers_data[container_name]["status"] = "removed"
+                            self.containers_data[container_name][
+                                "timestamp"
+                            ] = time.time()
 
-                    self._container_threads.pop(container_id, None)
+                    self.redis.set_container_info(
+                        container_id[:12],
+                        {
+                            "id": container_id[:12],
+                            "name": container_name,
+                            "status": "removed",
+                            "timestamp": time.time(),
+                        },
+                    )
+
+                self._container_threads.pop(container_id, None)
 
     def start(self):
-        """Start monitoring existing containers and watch for new ones."""
+        """Begin monitoring existing containers and watching for new"""
         self._running = True
 
         # Start monitoring all currently running containers
-        for container in self.client.containers.list():
-            t = threading.Thread(
-                target=self._monitor_container, args=(container,), daemon=True
-            )
-            t.start()
-            self._container_threads[container.id] = t
+        running_containers = self.client.containers.list(filters={"status": "running"})
+        for container in running_containers:
+            if container.name.startswith(self.container_prefix):
+                t = threading.Thread(
+                    target=self._monitor_container, args=(container,), daemon=True
+                )
+                t.start()
+                self._container_threads[container.id] = t
 
-        # Also track stopped containers (without monitoring thread)
+        # track stopped containers
         for container in self.client.containers.list(all=True):
-            if (
-                container.status != "running"
-                and container.name not in self.containers_data
-            ):
-                with self._lock:
-                    self.containers_data[container.name] = {
-                        "id": container.id[:12],
-                        "name": container.name,
-                        "status": container.status,
-                        "cpu": 0.0,
-                        "memory": 0.0,
-                        "timestamp": time.time(),
-                        "logs": "",
-                    }
+            if container.name.startswith(self.container_prefix):
+                if (
+                    container.status != "running"
+                    and container.name not in self.containers_data
+                ):
+                    with self._lock:
+                        self.containers_data[container.name] = {
+                            "id": container.id[:12],
+                            "name": container.name,
+                            "status": container.status,
+                            "cpu": 0.0,
+                            "memory": 0.0,
+                            "timestamp": time.time(),
+                            "logs": "",
+                        }
 
-        # Start Docker event watcher thread
+        #  Docker event watcher thread
         self._event_thread = threading.Thread(
             target=self._watch_for_new_containers, daemon=True
         )
         self._event_thread.start()
 
+        # state validation thread
+        self._validation_thread = threading.Thread(
+            target=self._validate_container_state, daemon=True
+        )
+        self._validation_thread.start()
+
+        self.redis.set_system_status("initialized", "Monitoring Service Active")
+
     def stop(self):
         self._running = False
         if self._event_thread:
             self._event_thread.join()
+        if self._validation_thread:
+            self._validation_thread.join()
 
         for t in self._container_threads.values():
             t.join()
 
     def get_data(self, clear_after_get=False):
-        """Return the latest container stats as JSON."""
+        """Return the latest container stats as JSON"""
         with self._lock:
             data = json.dumps(list(self.containers_data.values()))
             if clear_after_get:

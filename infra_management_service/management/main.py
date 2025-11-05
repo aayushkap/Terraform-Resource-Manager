@@ -29,7 +29,7 @@ async def receive_from_websocket(uri, monitor):
     while True:
         try:
             async with websockets.connect(uri) as websocket:
-                logger.info(f" Connected to {uri}")
+                logger.info(f"Connected to {uri}")
                 while True:
                     message = await websocket.recv()
                     container_info = json.loads(message)
@@ -46,13 +46,13 @@ async def main():
     monitor = Monitor()
     autoscaler = AutoScaler(monitor, terraform_dir="./terraform")
 
-    # Create both tasks
+    # Create websocket & auto_scaler tasks
     websocket_task = asyncio.create_task(receive_from_websocket(websocket_uri, monitor))
     autoscaler_task = asyncio.create_task(autoscaler.start())
 
-    logger.info(" Management service started")
+    logger.info("Management service started")
 
-    # Wait for both tasks
+    # await completion
     await asyncio.gather(websocket_task, autoscaler_task)
 
 

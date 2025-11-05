@@ -87,7 +87,6 @@ class ScalerService:
 
             # Execute Terraform
             success = self._run_terraform(new_count)
-
             if success:
                 logger.info(
                     f"Scaling complete: {new_count} containers should be running"

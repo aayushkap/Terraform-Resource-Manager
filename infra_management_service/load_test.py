@@ -3,8 +3,8 @@ import random
 import aiohttp
 
 URL = "http://127.0.0.1:8080/stress-cpu?n="
-PARALLEL_REQUESTS = 5  # workers
-REQUEST_GAP = 2.5  # wait after each request/worker
+PARALLEL_REQUESTS = 3  # workers
+REQUEST_GAP = 5  # wait after each request/worker
 
 success_count = 0
 failure_count = 0
@@ -14,7 +14,7 @@ stop_event = asyncio.Event()
 async def fetch(session, i):
     global success_count, failure_count
     n = random.randint(30, 40)
-    url = f"{URL}{n}"
+    url = f"{URL}{n}"   
     try:
         async with session.get(url, timeout=30) as resp:
             text = await resp.text()
@@ -31,7 +31,7 @@ async def worker(worker_id):
         while not stop_event.is_set():
             await fetch(session, f"W{worker_id}-R{i}")
             i += 1
-            await asyncio.sleep(REQUEST_GAP)
+            await asyncio.sleep(random.randint(1, 3))
 
 
 async def main():

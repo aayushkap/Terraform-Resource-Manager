@@ -16,7 +16,7 @@ class AutoScaler:
     def __init__(self, monitoring_service, terraform_dir: str = "./terraform"):
         self.monitor = monitoring_service
         self.config = ConfigManager()
-        self.config.print_config()
+        # self.config.print_config()
         self.analyzer = MetricsAnalyzer(self.config)
         self.scaler = ScalerService(self.config, terraform_dir)
 
