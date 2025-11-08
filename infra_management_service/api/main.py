@@ -16,26 +16,50 @@ except ConnectionError as e:
 
 @app.get("/dump", response_class=JSONResponse)
 def dump_all_keys():
-    """Return all key-value pairs (raw)."""
+    """Return all key-value pairs including lists and sets."""
     try:
         client = redis_service.client
         data = {}
 
         for key in client.scan_iter("*"):
             try:
-                val = client.get(key)
-                if val is None:
-                    continue
-                try:
-                    val = json.loads(val)
-                except Exception:
-                    val = val.decode() if isinstance(val, bytes) else val
-                data[key.decode() if isinstance(key, bytes) else key] = val
-            except Exception:
-                # skip non-string types
+                key_str = key.decode() if isinstance(key, bytes) else key
+                key_type = client.type(key)
+
+                if key_type == "string":
+                    val = client.get(key)
+                    try:
+                        val = json.loads(val)
+                    except Exception:
+                        val = val.decode() if isinstance(val, bytes) else val
+                    data[key_str] = val
+
+                elif key_type == "list":
+                    # Fetch all list items
+                    items = client.lrange(key, 0, -1)
+                    data[key_str] = [
+                        json.loads(item) if isinstance(item, str) else item
+                        for item in items
+                    ]
+
+                elif key_type == "set":
+                    # Fetch all set members
+                    data[key_str] = list(client.smembers(key))
+
+                elif key_type == "hash":
+                    # Fetch all hash fields
+                    data[key_str] = client.hgetall(key)
+
+                elif key_type == "zset":
+                    # Fetch all sorted set members
+                    data[key_str] = client.zrange(key, 0, -1, withscores=True)
+
+            except Exception as e:
+                print(f"Error processing key {key}: {e}")
                 continue
 
         return data
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

@@ -280,6 +280,85 @@ class MonitoringService:
 
                 self._container_threads.pop(container_id, None)
 
+    def _calculate_global_metrics(self):
+        """Calculate aggregate metrics across all containers."""
+        with self._lock:
+            containers = list(self.containers_data.values())
+
+        # Filter only running containers for resource metrics
+        running = [c for c in containers if c.get("status") == "running"]
+
+        if not running:
+            return {
+                "total_containers": len(containers),
+                "running_containers": 0,
+                "stopped_containers": len(
+                    [c for c in containers if c.get("status") in ("exited", "stopped")]
+                ),
+                "removed_containers": len(
+                    [c for c in containers if c.get("status") == "removed"]
+                ),
+                "avg_cpu": 0.0,
+                "max_cpu": 0.0,
+                "min_cpu": 0.0,
+                "total_cpu": 0.0,
+                "avg_memory": 0.0,
+                "max_memory": 0.0,
+                "min_memory": 0.0,
+                "total_memory": 0.0,
+                "timestamp": time.time(),
+            }
+
+        # Calculate CPU stats
+        cpu_values = [c.get("cpu", 0.0) for c in running]
+        memory_values = [c.get("memory", 0.0) for c in running]
+
+        metrics = {
+            # Container counts by status
+            "total_containers": len(containers),
+            "running_containers": len(running),
+            "stopped_containers": len(
+                [c for c in containers if c.get("status") in ("exited", "stopped")]
+            ),
+            "removed_containers": len(
+                [c for c in containers if c.get("status") == "removed"]
+            ),
+            "booting_containers": len(
+                [c for c in containers if c.get("status") == "booting"]
+            ),
+            # CPU metrics
+            "avg_cpu": (
+                round(sum(cpu_values) / len(cpu_values), 2) if cpu_values else 0.0
+            ),
+            "max_cpu": round(max(cpu_values), 2) if cpu_values else 0.0,
+            "min_cpu": round(min(cpu_values), 2) if cpu_values else 0.0,
+            "total_cpu": round(sum(cpu_values), 2),
+            # Memory metrics
+            "avg_memory": (
+                round(sum(memory_values) / len(memory_values), 2)
+                if memory_values
+                else 0.0
+            ),
+            "max_memory": round(max(memory_values), 2) if memory_values else 0.0,
+            "min_memory": round(min(memory_values), 2) if memory_values else 0.0,
+            "total_memory": round(sum(memory_values), 2),
+            "timestamp": time.time(),
+        }
+
+        return metrics
+
+    def _update_global_metrics(self):
+        """Periodically calculate and store global metrics."""
+        while self._running:
+            try:
+                time.sleep(5)  # update every 5 seconds
+
+                metrics = self._calculate_global_metrics()
+                self.redis.set_global_metrics(metrics)
+
+            except Exception as e:
+                print(f"Failed to update global metrics: {e}")
+
     def start(self):
         """Begin monitoring existing containers and watching for new"""
         self._running = True
@@ -324,6 +403,12 @@ class MonitoringService:
         )
         self._validation_thread.start()
 
+        # global metrics thread
+        self._global_metrics_thread = threading.Thread(
+            target=self._update_global_metrics, daemon=True
+        )
+        self._global_metrics_thread.start()
+
         self.redis.set_system_status("initialized", "Monitoring Service Active")
 
     def stop(self):
@@ -332,6 +417,8 @@ class MonitoringService:
             self._event_thread.join()
         if self._validation_thread:
             self._validation_thread.join()
+        if self._global_metrics_thread:
+            self._global_metrics_thread.join()
 
         for t in self._container_threads.values():
             t.join()
@@ -343,3 +430,8 @@ class MonitoringService:
             if clear_after_get:
                 self.containers_data.clear()
             return data
+
+    def get_global_data(self):
+        """Get global metrics as JSON."""
+        metrics = self._calculate_global_metrics()
+        return json.dumps(metrics)

@@ -1,0 +1,51 @@
+.box-container {
+  position: absolute;
+
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  width: 480px;
+  height: 60px;
+  padding: var(--space-md) var(--space-md);
+
+  font-family: var(--font-primary);
+  font-size: var(--size-heading-2);
+  font-weight: var(--weight-medium);
+
+  line-height: 1;
+
+  background-color: var(--color-bg-surface);
+  border: var(--border-width-thin) solid var(--color-border);
+  border-radius: var(--radius-md);
+  vertical-align: middle;
+
+  transition: box-shadow 0.2s ease;
+
+  cursor: grab;
+
+  &:hover {
+    box-shadow: inset var(--shadow-md);
+
+    border-color: var(--color-border);
+  }
+
+  .box-title {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .box-svg {
+    width: 25px;
+    height: 25px;
+    margin-right: var(--space-md);
+
+    fill: var(--color-accent-light);
+  }
+
+  .box-statuses {
+    display: flex;
+    gap: var(--space-sm);
+  }
+}

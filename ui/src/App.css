@@ -1,0 +1,123 @@
+/* Application Layout */
+.application-container {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+
+  gap: var(--space-md);
+
+  width: 100vw;
+  height: 100vh;
+  padding: var(--space-md);
+
+  box-shadow: var(--shadow-sm);
+}
+
+.application-section {
+  position: relative;
+
+  width: 100%;
+  height: 100%;
+
+  background-color: var(--color-bg-surface);
+  border: var(--border-width-thin) solid var(--color-border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-sm);
+
+  overflow: hidden;
+}
+
+/* Typography Utilities */
+h1 {
+  margin: 0;
+
+  font-size: var(--size-display);
+  font-weight: var(--weight-semibold);
+  line-height: 1.2;
+}
+
+h2 {
+  margin: 0;
+
+  font-size: var(--size-heading-1);
+  font-weight: var(--weight-semibold);
+  line-height: 1.3;
+}
+
+h3 {
+  margin: 0;
+
+  font-size: var(--size-heading-2);
+  font-weight: var(--weight-semibold);
+  line-height: 1.4;
+}
+
+p {
+  margin: 0;
+
+  color: var(--color-text-secondary);
+}
+
+code,
+pre {
+  font-family: var(--font-mono);
+  font-size: var(--size-body-sm);
+}
+
+/* Status Indicator Utilities */
+.status-indicator {
+  display: inline-block;
+
+  width: 10px;
+  height: 10px;
+
+  border-radius: 50%;
+}
+
+.status-success {
+  background-color: var(--color-status-success);
+}
+
+.status-warning {
+  background-color: var(--color-status-warning);
+}
+
+.status-critical {
+  background-color: var(--color-status-critical);
+}
+
+.status-info {
+  background-color: var(--color-status-info);
+}
+
+.status-neutral {
+  background-color: var(--color-status-neutral);
+}
+
+/* Button Base */
+
+/* button {
+  padding: var(--space-sm) var(--space-md);
+
+  font-family: var(--font-primary);
+  font-size: var(--size-body-md);
+  font-weight: var(--weight-medium);
+
+  border: none;
+  border-radius: var(--radius-lg);
+
+  transition: all var(--transition-fast);
+
+  cursor: pointer;
+}
+
+button:hover {
+  transform: translateY(-2px);
+
+  box-shadow: var(--shadow-md);
+}
+
+button:active {
+  transform: translateY(0);
+} */

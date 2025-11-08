@@ -47,7 +47,7 @@ class RedisService:
             "details": details or {},
         }
         self.client.lpush("system:events", json.dumps(event_data))
-        self.client.ltrim("system:events", 0, 499)  # Keep last 500 events
+        self.client.ltrim("system:events", 0, 99)  # Keep last 500 events
 
     def set_container_info(self, container_id: str, info: Dict):
         """Store container information."""
@@ -90,6 +90,41 @@ class RedisService:
             if info:
                 containers.append(info)
         return containers
+
+    def set_global_metrics(self, metrics: Dict):
+        """Store current metrics and add full entry to unlimited history."""
+        self.client.set("global:metrics", json.dumps(metrics))
+
+        # Add to unlimited history
+        history_entry = {"timestamp": time.time(), **metrics}
+        self.client.lpush("test", json.dumps(history_entry))
+        self.client.ltrim("test", 0, 99)  # keep latest 99 entries
+
+
+    def get_global_metrics(self) -> Optional[Dict]:
+        """Get latest global metrics snapshot."""
+        data = self.client.get("global:metrics")
+        return json.loads(data) if data else None
+
+    def get_global_metrics_history(self, limit: int = 100) -> List[Dict]:
+        """Get historical metrics with optional limit."""
+        history = self.client.lrange("global:metrics:history:all", 0, limit - 1)
+        return [json.loads(entry) for entry in history]
+
+    def get_all_global_metrics_history(self) -> List[Dict]:
+        """Get ALL historical metrics (no limit)."""
+        count = self.client.llen("global:metrics:history:all")
+        history = self.client.lrange("global:metrics:history:all", 0, count)
+        return [json.loads(entry) for entry in history]
+
+    def get_history_stats(self) -> Dict:
+        """Get info about stored histories."""
+        return {
+            "global_metrics_history_count": self.client.llen(
+                "global:metrics:history:all"
+            ),
+            "system_events_count": self.client.llen("system:events"),
+        }
 
     def set_container_count(self, count: int):
         """Set current container count."""
