@@ -7,6 +7,7 @@ const containerSlice = createSlice({
   reducers: {
     setContainer: (state, action) => {
       const container = action.payload;
+      console.log("setting", container);
       const index = state.findIndex((c) => c.id === container.id);
 
       if (index === -1) {

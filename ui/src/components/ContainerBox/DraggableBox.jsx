@@ -4,18 +4,18 @@ import Container from "./container.svg?react";
 import StatusDisplay from "@/components/StatusDisplay";
 import { useAppSelector, useAppDispatch } from "@/store/hooks";
 import { setContainer } from "@/store/slices/containersSlice";
+import { setSelectedContainer } from "@/store/slices/containerSlice";
 
-export default function ContainerBoxes() {
-  const containers = useAppSelector((s) => s.containers);
-  return containers.map((c) => <DraggableBox key={c.id} id={c.id} />);
-}
-
-function DraggableBox({ id }) {
+export default function DraggableBox({ id, onDoubleClick }) {
   const dispatch = useAppDispatch();
   const config = useAppSelector((state) => state.config);
   const container = useAppSelector((s) =>
     s.containers.find((c) => c.id === id)
   );
+  const selectedContainer = useAppSelector((state) => state.container);
+
+  console.log("id", id, "container", container);
+
   if (!container) return null;
 
   const dragRef = useRef(null);
@@ -62,10 +62,54 @@ function DraggableBox({ id }) {
     return "warn";
   }
 
+  const [clickCount, setClickCount] = useState(0);
+  const clickTimer = useRef(null);
+
+  const handleMouseDown = (e) => {
+    e.stopPropagation();
+
+    setClickCount((prev) => prev + 1);
+
+    if (clickTimer.current) clearTimeout(clickTimer.current);
+
+    clickTimer.current = setTimeout(() => {
+      if (clickCount === 1) {
+        // Single click - start drag
+        startDrag(e);
+      }
+      setClickCount(0);
+    }, 200);
+  };
+
+  const handleDoubleClick = (e) => {
+    e.stopPropagation();
+    if (clickTimer.current) clearTimeout(clickTimer.current);
+    setClickCount(0);
+    dragRef.current = null; // Cancel any drag
+    onDoubleClick?.();
+  };
+
+  const handleSingleClick = (e) => {
+    e.stopPropagation();
+
+    if (selectedContainer) {
+      if (selectedContainer === id) {
+        dispatch(setSelectedContainer(null));
+      } else {
+        dispatch(setSelectedContainer(id));
+      }
+      return;
+    }
+  };
+
   return (
     <div
-      className="box-container"
+      className={`box-container ${
+        selectedContainer == container.id && "selected"
+      }`}
       onMouseDown={startDrag}
+      onClick={handleSingleClick}
+      onDoubleClick={handleDoubleClick}
       style={{ left: container.x, top: container.y }}
     >
       <div className="box-title">

@@ -30,6 +30,12 @@
     border-color: var(--color-border);
   }
 
+  &.selected {
+    box-shadow: inset var(--shadow-md);
+
+    border-color: var(--color-accent-light);
+  }
+
   .box-title {
     display: flex;
     justify-content: space-between;

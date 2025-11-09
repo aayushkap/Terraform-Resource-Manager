@@ -4,6 +4,7 @@ const initialState = {
   cpu: { min: 30, max: 70 },
   mem: { min: 30, max: 70 },
   rpm: { min: 30, max: 70 },
+  mode: { label: "Manual", value: "manual" },
 };
 
 const configSlice = createSlice({
@@ -11,7 +12,8 @@ const configSlice = createSlice({
   initialState,
   reducers: {
     setConfig: (state, action) => {
-      return { ...state, ...action.payload }; // merge updates
+      console.log(action.payload);
+      return { ...state, ...action.payload };
     },
   },
 });

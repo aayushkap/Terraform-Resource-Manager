@@ -45,6 +45,13 @@
       background: var(--color-accent-light-tint);
     }
 
+    &.active {
+      color: var(--color-accent);
+
+      background: var(--color-accent-light-tint);
+      border-color: var(--color-accent-light);
+    }
+
     &:focus-visible {
       outline: 2px solid var(--color-accent);
       outline-offset: 2px;

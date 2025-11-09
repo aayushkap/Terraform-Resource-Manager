@@ -47,7 +47,7 @@ class RedisService:
             "details": details or {},
         }
         self.client.lpush("system:events", json.dumps(event_data))
-        self.client.ltrim("system:events", 0, 99)  # Keep last 500 events
+        self.client.ltrim("system:events", 0, 5)  # Keep last 500 events
 
     def set_container_info(self, container_id: str, info: Dict):
         """Store container information."""
@@ -64,7 +64,7 @@ class RedisService:
             "memory": info.get("memory"),
         }
         self.client.lpush(history_key, json.dumps(event))
-        self.client.ltrim(history_key, 0, 99)  # Keep last 100 events
+        self.client.ltrim(history_key, 0, 5)  # Keep last 100 events
 
     def get_container_info(self, container_id: str) -> Optional[Dict]:
         """Get container information."""
@@ -97,8 +97,8 @@ class RedisService:
 
         # Add to unlimited history
         history_entry = {"timestamp": time.time(), **metrics}
-        self.client.lpush("test", json.dumps(history_entry))
-        self.client.ltrim("test", 0, 99)  # keep latest 99 entries
+        self.client.lpush("global:metrics:history", json.dumps(history_entry))
+        self.client.ltrim("global:metrics:history", 0, 5)  # keep latest 99 entries
 
 
     def get_global_metrics(self) -> Optional[Dict]:
@@ -163,7 +163,7 @@ class RedisService:
             "details": details or {},
         }
         self.client.lpush("scaling:history", json.dumps(event))
-        self.client.ltrim("scaling:history", 0, 99)  # Keep last 100 scaling events
+        self.client.ltrim("scaling:history", 0, 5)  # Keep last 100 scaling events
 
         # Store last action
         self.client.set("scaling:last_action", json.dumps(event))
@@ -185,11 +185,11 @@ class RedisService:
         # Store in history
         if "avg_cpu" in metrics:
             self.client.lpush("metrics:history:cpu", metrics["avg_cpu"])
-            self.client.ltrim("metrics:history:cpu", 0, 99)
+            self.client.ltrim("metrics:history:cpu", 0, 5)
 
         if "avg_memory" in metrics:
             self.client.lpush("metrics:history:memory", metrics["avg_memory"])
-            self.client.ltrim("metrics:history:memory", 0, 99)
+            self.client.ltrim("metrics:history:memory", 0, 5)
 
     def get_current_metrics(self) -> Dict:
         """Get current metrics."""
