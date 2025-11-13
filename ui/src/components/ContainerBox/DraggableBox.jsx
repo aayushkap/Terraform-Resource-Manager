@@ -14,8 +14,6 @@ export default function DraggableBox({ id, onDoubleClick }) {
   );
   const selectedContainer = useAppSelector((state) => state.container);
 
-  console.log("id", id, "container", container);
-
   if (!container) return null;
 
   const dragRef = useRef(null);

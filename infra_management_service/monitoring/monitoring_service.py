@@ -84,7 +84,7 @@ class MonitoringService:
                 logs = self._get_container_logs(container.id, tail=10)
 
                 data = {
-                    "id": container.id[:12],
+                    "id": container.name,
                     "name": container.name,
                     "status": status,
                     "cpu": round(cpu_percent, 2),
@@ -96,7 +96,7 @@ class MonitoringService:
                 with self._lock:
                     self.containers_data[container.name] = data
 
-                self.redis.set_container_info(container.id[:12], data)
+                self.redis.set_container_info(container.name, data)
 
                 # If container died during stats collection, break loop
                 if status in ("exited", "stopped", "removed"):
@@ -127,9 +127,9 @@ class MonitoringService:
                 )
 
         self.redis.set_container_info(
-            container.id[:12],
+            container.name,
             {
-                "id": container.id[:12],
+                "id": container.name,
                 "name": container.name,
                 "status": current_status,  # "exited", "stopped", "removed"
                 "cpu": 0.0,
@@ -200,7 +200,7 @@ class MonitoringService:
                         ):
                             with self._lock:
                                 self.containers_data[container.name] = {
-                                    "id": container.id[:12],
+                                    "id": container.name,
                                     "name": container.name,
                                     "status": "booting",
                                     "cpu": 0.0,
@@ -209,9 +209,9 @@ class MonitoringService:
                                     "logs": "",
                                 }
                             self.redis.set_container_info(
-                                container.id[:12],
+                                container.name,
                                 {
-                                    "id": container.id[:12],
+                                    "id": container.name,
                                     "name": container.name,
                                     "status": "booting",
                                     "cpu": 0.0,
@@ -382,7 +382,7 @@ class MonitoringService:
                 ):
                     with self._lock:
                         self.containers_data[container.name] = {
-                            "id": container.id[:12],
+                            "id": container.name,
                             "name": container.name,
                             "status": container.status,
                             "cpu": 0.0,
