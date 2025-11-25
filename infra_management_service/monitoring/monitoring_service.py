@@ -3,6 +3,7 @@ import threading
 import json
 import time
 from utils.redis_service import RedisService
+import requests
 
 
 class MonitoringService:
@@ -49,6 +50,7 @@ class MonitoringService:
         """Continuously monitor a single container's resource utilization"""
         try:
             stats_stream = container.stats(stream=True)
+            rpm_count, rpm_value = 0, 0
             for raw_stats in stats_stream:
                 if not self._running or container.id not in self._container_threads:
                     break
@@ -89,13 +91,26 @@ class MonitoringService:
                     "status": status,
                     "cpu": round(cpu_percent, 2),
                     "memory": round(mem_percent, 2),
+                    "rpm": rpm_value,
                     "timestamp": time.time(),
                     "logs": logs,
                 }
 
+                if rpm_count % 10 == 0:
+                    try:
+                        res = requests.get(
+                            f"http://localhost:8080/metrics?server_name={container.name}",
+                            timeout=1,
+                        )
+                        res.raise_for_status()
+                        rpm_value = res.json()
+                    except Exception as e:
+                        pass
+                rpm_count += 1
+                data["rpm"] = rpm_value.get("rpm") or 0
+
                 with self._lock:
                     self.containers_data[container.name] = data
-
                 self.redis.set_container_info(container.name, data)
 
                 # If container died during stats collection, break loop
@@ -122,6 +137,7 @@ class MonitoringService:
                         "status": current_status,
                         "cpu": 0.0,
                         "memory": 0.0,
+                        "rpm": 0,
                         "timestamp": time.time(),
                     }
                 )
@@ -134,6 +150,7 @@ class MonitoringService:
                 "status": current_status,  # "exited", "stopped", "removed"
                 "cpu": 0.0,
                 "memory": 0.0,
+                "rpm": 0,
                 "timestamp": time.time(),
                 "logs": "",
             },
@@ -163,6 +180,7 @@ class MonitoringService:
                         container_info["status"] = "removed"
                         container_info["cpu"] = 0.0
                         container_info["memory"] = 0.0
+                        container_info["rpm"] = 0
                         container_info["timestamp"] = time.time()
                         self.redis.set_container_info(container_id, container_info)
                     else:
@@ -174,6 +192,7 @@ class MonitoringService:
                             if actual_status != "running":
                                 container_info["cpu"] = 0.0
                                 container_info["memory"] = 0.0
+                                container_info["rpm"] = 0
                             self.redis.set_container_info(container_id, container_info)
 
             except Exception as e:
@@ -205,6 +224,7 @@ class MonitoringService:
                                     "status": "booting",
                                     "cpu": 0.0,
                                     "memory": 0.0,
+                                    "rpm": 0,
                                     "timestamp": time.time(),
                                     "logs": "",
                                 }
@@ -216,6 +236,7 @@ class MonitoringService:
                                     "status": "booting",
                                     "cpu": 0.0,
                                     "memory": 0.0,
+                                    "rpm": 0,
                                     "timestamp": time.time(),
                                     "logs": "",
                                 },
@@ -387,6 +408,7 @@ class MonitoringService:
                             "status": container.status,
                             "cpu": 0.0,
                             "memory": 0.0,
+                            "rpm": 0,
                             "timestamp": time.time(),
                             "logs": "",
                         }

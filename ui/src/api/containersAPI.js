@@ -27,6 +27,7 @@ export const containersApi = createApi({
             status: container.info.status,
             cpu: container.info.cpu,
             mem: container.info.memory,
+            rpm: container.info.rpm,
             memory: container.info.memory,
             logs: container.info.logs || "",
             timestamp: container.info.timestamp,

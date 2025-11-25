@@ -7,10 +7,15 @@ from fastapi.responses import JSONResponse, Response, StreamingResponse
 import httpx
 import docker
 import json
+from collections import defaultdict
+import time
 
 app = FastAPI()
 client = docker.DockerClient(base_url="npipe:////./pipe/docker_engine")
 current_backend = 0
+request_counters = {}
+request_history = defaultdict(list)
+WINDOW_SECONDS = 60
 
 
 def get_backends():
@@ -31,6 +36,31 @@ def get_backends():
     return backends
 
 
+@app.get("/health")
+async def health():
+    """Gateway health check with backend info."""
+    backends = get_backends()
+    return {
+        "status": "healthy",
+        "backends": [b["name"] for b in backends],
+        "backend_count": len(backends),
+    }
+
+
+@app.get("/metrics")
+async def metrics(server_name: str = None):
+    """Return requests per backend in last 60 seconds"""
+    now = time.time()
+    metrics_data = {}
+    for backend, timestamps in request_history.items():
+        # Count requests in the last WINDOW_SECONDS
+        recent_count = len([ts for ts in timestamps if ts > now - WINDOW_SECONDS])
+        metrics_data[backend] = recent_count
+    if server_name:
+        return {"rpm": metrics_data.get(server_name, None)}
+    return metrics_data
+
+
 @app.api_route("/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH"])
 async def proxy(request: Request, path: str):
     global current_backend
@@ -49,9 +79,16 @@ async def proxy(request: Request, path: str):
 
     print(f"Proxying {request.method} {url} -> {backend['name']}")
 
-    # Forward request
+    now = time.time()
+    request_history[backend["name"]].append(now)
+    # Clean old requests beyond the window
+    request_history[backend["name"]] = [
+        ts for ts in request_history[backend["name"]] if ts > now - WINDOW_SECONDS
+    ]
+
+    # Forward request iwht 10 sec to
     timeout = httpx.Timeout(
-        connect=10.0,  # Connection timeout
+        connect=10.0,
         read=120.0,
         write=10.0,
         pool=10.0,
@@ -160,17 +197,6 @@ async def proxy(request: Request, path: str):
             },
             status_code=500,
         )
-
-
-@app.get("/health")
-async def health():
-    """Gateway health check with backend info."""
-    backends = get_backends()
-    return {
-        "status": "healthy",
-        "backends": [b["name"] for b in backends],
-        "backend_count": len(backends),
-    }
 
 
 if __name__ == "__main__":

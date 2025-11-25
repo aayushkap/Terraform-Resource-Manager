@@ -4,6 +4,8 @@
   align-items: center;
   gap: var(--space-sm);
 
+  width: 99px;
+
   font-family: var(--font-primary);
   font-weight: var(--weight-medium);
 
@@ -27,7 +29,7 @@
 
   // Sizes
   &-sm {
-    padding: var(--space-xs) var(--space-sm);
+    padding: var(--space-sm) var(--space-sm);
 
     font-size: var(--size-body-sm);
   }
@@ -69,7 +71,7 @@
   &-na {
     color: var(--color-status-neutral);
 
-    background-color: var(--color-status-neutral);
+    // background-color: var(--color-status-neutral);
     border: 1px solid var(--color-status-neutral);
   }
 }

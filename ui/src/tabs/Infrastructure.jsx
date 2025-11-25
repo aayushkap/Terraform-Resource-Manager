@@ -116,7 +116,7 @@ export default function InfraView() {
 
     const startX = CENTER_X + 200;
 
-    const dynamicOffset = numContainers > 4 ? 360 : 240;
+    const dynamicOffset = numContainers > 4 ? 280 : 240;
     const startYRange = CENTER_Y - dynamicOffset;
 
     const endYRange = CENTER_Y + dynamicOffset * 2;

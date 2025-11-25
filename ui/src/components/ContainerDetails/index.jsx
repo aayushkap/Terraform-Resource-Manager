@@ -137,6 +137,9 @@ export default function ContainerDetailsModal() {
                       <span className="history-metric">
                         Mem: {entry.memory}%
                       </span>
+                      <span className="history-metric">
+                        RPM: {entry.memory}%
+                      </span>
                     </div>
                   </div>
                 ))}

@@ -5,7 +5,7 @@
   justify-content: space-between;
   align-items: center;
 
-  width: 480px;
+  width: 580px;
   height: 60px;
   padding: var(--space-md) var(--space-md);
 
@@ -24,6 +24,10 @@
 
   cursor: grab;
 
+  &.removed {
+    color: var(--color-status-neutral);
+  }
+
   &:hover {
     box-shadow: inset var(--shadow-md);
 
@@ -34,6 +38,10 @@
     box-shadow: inset var(--shadow-md);
 
     border-color: var(--color-accent-light);
+
+    &.removed {
+      color: var(--color-status-neutral);
+    }
   }
 
   .box-title {
@@ -48,6 +56,10 @@
     margin-right: var(--space-md);
 
     fill: var(--color-accent-light);
+
+    &.removed {
+      fill: var(--color-status-neutral);
+    }
   }
 
   .box-statuses {

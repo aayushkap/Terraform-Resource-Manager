@@ -49,12 +49,16 @@ export default function DraggableBox({ id, onDoubleClick }) {
 
   function compareStatusWithConfig(type) {
     if (!config) return "na";
+    if (container[type] === 0) {
+      return "na";
+    }
 
     const configType = config[type];
-    if (container[type] > configType["max"]) {
+
+    if (container[type] > configType.max) {
       return "alert";
     }
-    if (container[type] < configType["min"]) {
+    if (container[type] < configType.min) {
       return "ok";
     }
     return "warn";
@@ -104,30 +108,38 @@ export default function DraggableBox({ id, onDoubleClick }) {
     <div
       className={`box-container ${
         selectedContainer == container.id && "selected"
-      }`}
+      } ${container.status.toLowerCase() == "removed" && "removed"}`}
       onMouseDown={startDrag}
       onClick={handleSingleClick}
       onDoubleClick={handleDoubleClick}
       style={{ left: container.x, top: container.y }}
     >
-      <div className="box-title">
-        <Container className="box-svg" />
+      <div
+        className={`box-title ${
+          container.status.toLowerCase() == "removed" && "removed"
+        }`}
+      >
+        <Container
+          className={`box-svg ${
+            container.status.toLowerCase() == "removed" && "removed"
+          }`}
+        />
         {container.label}
       </div>
 
       <div className="box-statuses">
         <StatusDisplay
-          label={`${container.cpu}% CPU` || "N/A"}
+          label={`${container.cpu}% CPU` || "na"}
           size="sm"
           status={compareStatusWithConfig("cpu")}
         />
         <StatusDisplay
-          label={`${container.mem}% Mem` || "N/A"}
+          label={`${container.mem}% Mem` || "na"}
           size="sm"
           status={compareStatusWithConfig("mem")}
         />
         <StatusDisplay
-          label={`${container.rpm} RPM` || "N/A"}
+          label={`${container.rpm} RPM` || "na"}
           size="sm"
           status={compareStatusWithConfig("rpm")}
         />
