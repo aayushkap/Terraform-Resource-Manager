@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <!-- Background Circle -->
+  <circle cx="100" cy="100" r="95" fill="#5C4EE5" opacity="0.1"/>
+  
+  <!-- Terraform Hexagon -->
+  <polygon points="100,30 140,55 140,105 100,130 60,105 60,55" 
+           fill="#5C4EE5" stroke="#7B68EE" stroke-width="2"/>
+  
+  <!-- Container Icons (Docker-style) -->
+  <rect x="85" y="60" width="30" height="20" rx="2" fill="#FFFFFF" opacity="0.9"/>
+  <rect x="85" y="85" width="30" height="20" rx="2" fill="#FFFFFF" opacity="0.7"/>
+  
+  <!-- Scaling Arrows -->
+  <path d="M 50 100 L 35 100 L 35 85 M 35 100 L 35 115" 
+        stroke="#00D4AA" stroke-width="3" fill="none" stroke-linecap="round"/>
+  <path d="M 150 100 L 165 100 L 165 85 M 165 100 L 165 115" 
+        stroke="#00D4AA" stroke-width="3" fill="none" stroke-linecap="round"/>
+  
+  <!-- Arrow Heads -->
+  <polygon points="35,80 30,85 40,85" fill="#00D4AA"/>
+  <polygon points="35,120 30,115 40,115" fill="#00D4AA"/>
+  <polygon points="165,80 160,85 170,85" fill="#00D4AA"/>
+  <polygon points="165,120 160,115 170,115" fill="#00D4AA"/>
+  
+  <!-- Center Dot -->
+  <circle cx="100" cy="95" r="4" fill="#FFFFFF"/>
+</svg>

@@ -78,16 +78,26 @@ def get_global_metrics():
     """Get current global metrics."""
     try:
         client = redis_service.client
-        val = client.get("global:metrics")
 
-        if not val:
+        metrics = client.get("global:metrics")
+
+        history = client.lrange("global:metrics:history", 0, -1)
+
+        if not metrics:
             raise HTTPException(status_code=404, detail="Global metrics not found")
 
-        return decode_value(val)
+        current_metrics = decode_value(metrics)
+        history = [json.loads(item) for item in history] if history else []
+
+        return {**current_metrics, "history": history}
 
     except HTTPException:
         raise
     except Exception as e:
+        print(f"ERROR: {type(e).__name__}: {str(e)}")
+        import traceback
+
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -224,6 +234,23 @@ def health_check():
         return {"status": "healthy", "redis": "connected"}
     except Exception as e:
         raise HTTPException(status_code=503, detail=f"Redis unhealthy: {str(e)}")
+
+
+@app.get("/debug/metrics-type", response_class=JSONResponse)
+def debug_metrics_type():
+    """Debug endpoint to check metrics key type."""
+    client = redis_service.client
+    metrics_type = client.type("global:metrics")
+    history_type = client.type("global:metrics:history")
+
+    return {
+        "global:metrics": (
+            metrics_type.decode() if isinstance(metrics_type, bytes) else metrics_type
+        ),
+        "global:metrics:history": (
+            history_type.decode() if isinstance(history_type, bytes) else history_type
+        ),
+    }
 
 
 if __name__ == "__main__":

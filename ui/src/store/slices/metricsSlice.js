@@ -2,10 +2,10 @@ import { createSlice } from "@reduxjs/toolkit";
 
 const initialState = [];
 const containerSlice = createSlice({
-  name: "containers",
+  name: "containerMetrics",
   initialState,
   reducers: {
-    setContainer: (state, action) => {
+    setContainerMetrics: (state, action) => {
       const container = action.payload;
       const index = state.findIndex((c) => c.id === container.id);
 
@@ -17,13 +17,9 @@ const containerSlice = createSlice({
         state[index] = { ...state[index], ...container };
       }
     },
-    removeContainer: (state, action) => {
-      const id = action.payload;
-      return state.filter((c) => c.id !== id);
-    },
   },
 });
 
-export const { setContainer, removeContainer } = containerSlice.actions;
+export const { setContainerMetrics } = containerSlice.actions;
 
 export default containerSlice.reducer;

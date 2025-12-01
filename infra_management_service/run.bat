@@ -7,7 +7,10 @@ call venv\Scripts\activate.bat
 
 REM Step 1: Run Terraform container and wait for completion
 cd terraform
+docker-compose run --rm terraform destroy -auto-approve
+docker network prune -f
 echo Starting Terraform container...
+docker-compose run --rm terraform init
 docker-compose run --rm terraform apply -var="server_count=1" -auto-approve
 cd ..
 

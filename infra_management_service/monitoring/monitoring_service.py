@@ -319,6 +319,7 @@ class MonitoringService:
                 "removed_containers": len(
                     [c for c in containers if c.get("status") == "removed"]
                 ),
+                "booting_containers": 0,
                 "avg_cpu": 0.0,
                 "max_cpu": 0.0,
                 "min_cpu": 0.0,
@@ -327,12 +328,17 @@ class MonitoringService:
                 "max_memory": 0.0,
                 "min_memory": 0.0,
                 "total_memory": 0.0,
+                "avg_rpm": 0.0,
+                "max_rpm": 0,
+                "min_rpm": 0,
+                "total_rpm": 0,
                 "timestamp": time.time(),
             }
 
-        # Calculate CPU stats
+        # Calculate CPU, Memory, and RPM stats
         cpu_values = [c.get("cpu", 0.0) for c in running]
         memory_values = [c.get("memory", 0.0) for c in running]
+        rpm_values = [c.get("rpm", 0) for c in running]
 
         metrics = {
             # Container counts by status
@@ -363,6 +369,13 @@ class MonitoringService:
             "max_memory": round(max(memory_values), 2) if memory_values else 0.0,
             "min_memory": round(min(memory_values), 2) if memory_values else 0.0,
             "total_memory": round(sum(memory_values), 2),
+            # RPM metrics
+            "avg_rpm": (
+                round(sum(rpm_values) / len(rpm_values), 2) if rpm_values else 0.0
+            ),
+            "max_rpm": max(rpm_values) if rpm_values else 0,
+            "min_rpm": min(rpm_values) if rpm_values else 0,
+            "total_rpm": sum(rpm_values),
             "timestamp": time.time(),
         }
 

@@ -99,7 +99,7 @@ class RedisService:
         # Add to unlimited history
         history_entry = {"timestamp": time.time(), **metrics}
         self.client.lpush("global:metrics:history", json.dumps(history_entry))
-        self.client.ltrim("global:metrics:history", 0, 5)  # keep latest 99 entries
+        self.client.ltrim("global:metrics:history", 0, 500)  # keep latest 99 entries
 
     def clear_all(self):
         """Clear all autoscaler data."""
@@ -110,6 +110,9 @@ class RedisService:
             "scaling:*",
             "metrics:*",
             "analysis:*",
+            "global:*"
+            "test",
+            "test*",
         ]
         for pattern in patterns:
             keys = self.client.keys(pattern)
