@@ -3,8 +3,8 @@ import random
 import aiohttp
 
 URL = "http://127.0.0.1:8080/stress-cpu?n="
-PARALLEL_REQUESTS = 2  # workers
-REQUEST_GAP = 15  # wait after each request/worker
+PARALLEL_REQUESTS = 6  # workers
+REQUEST_GAP = 10  # wait after each request/worker
 
 success_count = 0
 failure_count = 0
