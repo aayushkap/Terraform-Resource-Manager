@@ -85,7 +85,7 @@ export default function ContainerMetricsChart() {
           booting: latestItem.booting_containers,
           removed: latestItem.removed_containers,
 
-          cpu: latestItem[`${aggregationFilter.value}_cpu`] || 0,
+          cpu: latestItem[`${aggregationFilter.value}_cpu`] / 10 || 0,
           memory: latestItem[`${aggregationFilter.value}_memory`] || 0,
           rpm: latestItem[`${aggregationFilter.value}_rpm`] || 0,
         };
@@ -113,7 +113,6 @@ export default function ContainerMetricsChart() {
     return (
       <div className="chart-tooltip">
         <p className="tooltip-label">{label}</p>
-
         {containers.length > 0 && (
           <div className="tooltip-section">
             <p className="tooltip-section-title">Containers:</p>
@@ -131,7 +130,6 @@ export default function ContainerMetricsChart() {
             </div>
           </div>
         )}
-
         {metrics.length > 0 && (
           <div className="tooltip-section">
             <p className="tooltip-section-title">Metrics:</p>
@@ -145,7 +143,9 @@ export default function ContainerMetricsChart() {
                   <span className="tooltip-name">{entry.name}:</span>
                   <span className="tooltip-value">
                     {typeof entry.value === "number"
-                      ? entry.value.toFixed(2)
+                      ? entry.name === "CPU %"
+                        ? (entry.value * 10).toFixed(2)
+                        : entry.value.toFixed(2)
                       : entry.value}
                   </span>
                 </div>

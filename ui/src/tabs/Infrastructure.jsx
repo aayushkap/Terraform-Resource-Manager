@@ -105,7 +105,7 @@ export default function InfraView() {
             initialScale={1}
             initialPositionX={initialX}
             initialPositionY={initialY}
-            minScale={0.75} // max zoom out
+            minScale={0.6} // max zoom out
             maxScale={1.5} // max zoom in
             limitToBounds={true}
             bounds={{
