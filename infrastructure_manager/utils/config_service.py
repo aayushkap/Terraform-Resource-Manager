@@ -8,6 +8,44 @@ from utils.logger_service import Logger
 
 logger = Logger(__file__).get_logger()
 
+from pydantic import BaseModel, Field
+from typing import Literal
+
+
+class Thresholds(BaseModel):
+    cpu: float = Field(..., ge=0, le=100)
+    memory: float = Field(..., ge=0, le=100)
+    requests_per_minute: int = Field(..., ge=0)
+
+
+class SustainedPeriods(BaseModel):
+    scale_up: int = Field(..., ge=1)
+    scale_down: int = Field(..., ge=1)
+
+
+class ScalingConfig(BaseModel):
+    mode: Literal["AUTO", "MANUAL"] = "AUTO"
+
+    min_containers: int = Field(..., ge=1)
+    max_containers: int = Field(..., ge=1)
+
+    thresholds: Thresholds
+    scale_down_thresholds: Thresholds
+
+    sustained_periods: SustainedPeriods
+
+    cooldown_seconds: int = Field(..., ge=1)
+    check_interval_seconds: int = Field(..., ge=1)
+
+    strategy: Literal["cpu", "memory", "rpm"] = "cpu"
+
+    class Config:
+        validate_assignment = True
+        extra = "ignore"
+
+    def get(self, key: str, default=None):
+        return getattr(self, key, default)
+
 
 class ConfigManager:
     def __init__(self, config_path: str = "scaling_config.json"):
@@ -29,6 +67,7 @@ class ConfigManager:
     def _load_config(self):
         """Load config from JSON file"""
         try:
+
             if self.config_path.exists():
                 with self._lock:
                     config_text = self.config_path.read_text()
@@ -40,7 +79,7 @@ class ConfigManager:
                         self._save_config()
                         return
 
-                    self.config = json.loads(config_text)
+                    self.config = ScalingConfig(**json.loads(config_text))
                     self._last_modified = self.config_path.stat().st_mtime
                     logger.info(f"Configuration loaded successfully: {self.config}")
             else:
@@ -127,20 +166,6 @@ class ConfigManager:
                     return default
             return val if val is not None else default
 
-    def print_config(self):
-        """Print current configuration."""
-        with self._lock:
-            logger.info("=== Current Configuration ===")
-            logger.info(f"Mode: {self.config.get('mode')}")
-            logger.info(f"Container Prefix: {self.config.get('container_prefix')}")
-            logger.info(
-                f"Min/Max containers: {self.config.get('min_containers')}/{self.config.get('max_containers')}"
-            )
-            logger.info(f"Strategy: {self.config.get('strategy')}")
-            logger.info(f"Check interval: {self.config.get('check_interval_seconds')}s")
-            logger.info(f"Cooldown: {self.config.get('cooldown_seconds')}s")
-            logger.info(f"Thresholds: {self.config.get('thresholds')}")
-            logger.info(
-                f"Scale down thresholds: {self.config.get('scale_down_thresholds')}"
-            )
-            logger.info("============================")
+
+# Run initial singleton instance which will be imported everywhere
+config = ConfigManager()

@@ -3,9 +3,14 @@ from fastapi.responses import JSONResponse
 from redis.exceptions import ConnectionError
 from typing import Optional
 import json
+from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 
 from utils.redis_service import RedisService
+from utils.logger_service import Logger
+from utils.config_service import config, ScalingConfig
+
+logger = Logger(__file__).get_logger()
 
 app = FastAPI(title="Redis State API")
 
@@ -225,6 +230,14 @@ def get_system_events(limit: Optional[int] = None):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.post("/update-config")
+def update_config(new_config: ScalingConfig):
+    with config._lock:
+        config.config = new_config.model_dump()
+        config._save_config()
+    return {"status": "ok"}
+
+
 @app.get("/health", response_class=JSONResponse)
 def health_check():
     """Check Redis connection health."""
@@ -236,24 +249,9 @@ def health_check():
         raise HTTPException(status_code=503, detail=f"Redis unhealthy: {str(e)}")
 
 
-@app.get("/debug/metrics-type", response_class=JSONResponse)
-def debug_metrics_type():
-    """Debug endpoint to check metrics key type."""
-    client = redis_service.client
-    metrics_type = client.type("global:metrics")
-    history_type = client.type("global:metrics:history")
-
-    return {
-        "global:metrics": (
-            metrics_type.decode() if isinstance(metrics_type, bytes) else metrics_type
-        ),
-        "global:metrics:history": (
-            history_type.decode() if isinstance(history_type, bytes) else history_type
-        ),
-    }
-
-
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run(app, host="0.0.0.0", port=8081, log_level="info")
+    uvicorn.run(
+        "api.main:app", host="0.0.0.0", port=8081, log_level="info", reload=True
+    )

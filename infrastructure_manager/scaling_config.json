@@ -1,22 +1,22 @@
 {
   "mode": "AUTO",
   "min_containers": 1,
-  "max_containers": 10,
+  "max_containers": 2,
   "thresholds": {
     "cpu": 70.0,
-    "memory": 80.0,
-    "requests_per_minute": 100
+    "memory": 50.0,
+    "requests_per_minute": 15
   },
   "scale_down_thresholds": {
-    "cpu": 30.0,
-    "memory": 40.0,
-    "requests_per_minute": 20
+    "cpu": 10.0,
+    "memory": 10.0,
+    "requests_per_minute": 15
   },
   "sustained_periods": {
-    "scale_up": 3,
-    "scale_down": 5
+    "scale_up": 1,
+    "scale_down": 1
   },
-  "cooldown_seconds": 60,
-  "check_interval_seconds": 5,
+  "cooldown_seconds": 1,
+  "check_interval_seconds": 10,
   "strategy": "cpu"
 }

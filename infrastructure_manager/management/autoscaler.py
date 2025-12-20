@@ -4,7 +4,7 @@ Main orchestrator
 
 import asyncio
 import json
-from management.config import ConfigManager
+from utils.config_service import config
 from management.metrics_analyzer import MetricsAnalyzer
 from management.scaler_service import ScalerService
 from utils.logger_service import Logger
@@ -15,10 +15,9 @@ logger = Logger(__file__).get_logger()
 class AutoScaler:
     def __init__(self, monitoring_service, terraform_dir: str = "./terraform"):
         self.monitor = monitoring_service
-        self.config = ConfigManager()
         # self.config.print_config()
-        self.analyzer = MetricsAnalyzer(self.config)
-        self.scaler = ScalerService(self.config, terraform_dir)
+        self.analyzer = MetricsAnalyzer(config)
+        self.scaler = ScalerService(config, terraform_dir)
 
         self._running = False
 
@@ -40,7 +39,8 @@ class AutoScaler:
                     logger.info(f"Scaling decision: {decision}")
                     self.scaler.request_scale(decision)
 
-                check_interval = self.config.get("check_interval_seconds", 5)
+                print("config.config", config.config)
+                check_interval = config.get("check_interval_seconds", 5)
                 await asyncio.sleep(check_interval)
 
             except Exception as e:

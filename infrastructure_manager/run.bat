@@ -22,9 +22,9 @@ docker run -d --name redis-server -p 6379:6379 redis:latest
 
 REM Step 3: Run the Python services in parallel
 echo Starting services...
-start cmd /k python -m management.main
-start cmd /k python -m monitoring.main
-start cmd /k python -m gateway.main
-start cmd /k python -m api.main
+start cmd /k "call venv\Scripts\activate.bat && python -m management.main"
+start cmd /k "call venv\Scripts\activate.bat && python -m monitoring.main"
+start cmd /k "call venv\Scripts\activate.bat && python -m gateway.main"
+start cmd /k "call venv\Scripts\activate.bat && python -m api.main"
 
 echo All services started after Terraform completed.

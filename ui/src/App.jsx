@@ -2,6 +2,7 @@ import React from "react";
 import TabSwitcher from "./components/TabSwitcher";
 import InfraView from "./tabs/Infrastructure";
 import Observability from "./tabs/Observability";
+import Configruation from "./tabs/Configuration";
 
 import "./App.css";
 import { useAppSelector } from "@/store/hooks";
@@ -15,6 +16,7 @@ export default function App() {
       <main className="application-section">
         {tab === "infrastructure_management" && <InfraView />}
         {tab === "observability" && <Observability />}
+        {tab === "configuration" && <Configruation />}
       </main>
     </section>
   );
