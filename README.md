@@ -2,7 +2,7 @@
 
 Autoscaling for Dockerized FastAPI services with Terraform. It provisions backend containers with Terraform, routes traffic through a small gateway, monitors live Docker stats, stores state in Redis, and scales the fleet up or down based on runtime metrics.
 
-## What It Does
+## Purpose
 
 - Creates and manages `fastapi-server-*` backend containers with Terraform.
 - Sends traffic through a FastAPI gateway that does round-robin routing and tracks per-container request rate.
@@ -11,7 +11,7 @@ Autoscaling for Dockerized FastAPI services with Terraform. It provisions backen
 - Runs an autoscaling loop that applies min/max bounds, thresholds, cooldowns, and sustained-period checks before changing container count.
 - Exposes Redis-backed state to the React UI through a small API.
 
-## How It Works
+## Working
 
 1. Terraform builds the demo FastAPI image and brings up `fastapi-server-*` containers on a Docker network.
 2. The gateway discovers running backend containers directly from Docker and proxies incoming requests to them round-robin.
@@ -32,7 +32,7 @@ Autoscaling for Dockerized FastAPI services with Terraform. It provisions backen
 
 ![`Architecture.png`](./Architecture.png)
 
-## Running It
+## How To Run
 
 - Backend stack: `cd infrastructure_manager` then run `run.bat`
 - UI: `cd ui && npm install && npm run dev`
